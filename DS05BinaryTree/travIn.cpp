@@ -36,3 +36,30 @@ void travIn(BinNodePosi(T) x, V &visit)
         x = x->rChild;  //转向其右子树(可能为NULL，此时不会有任何动作)
     }
 }
+
+//中序遍历算法-无需辅助栈
+template <typename T, typename VST>
+void travIn_I2(BinNodePosi(T) x, VST &visit)
+{
+    bool backtrack = false; //判断前一步是否是右子树回溯
+    while (true)
+    {
+        if (!backtrack && HasLChild(*x)) //若有左子树且不是刚刚回溯
+            x = x->lChild;               //则深入遍历左子树
+        else                             //若刚刚回溯(等效为无左子树)或无左子树
+        {
+            visit(x->data);    //访问该节点
+            if (HasRChild(*x)) //若右子树非空
+            {
+                x = x->rChild;     //则深入右子树继续遍历
+                backtrack = false; //关闭回溯标志
+            }
+            else //若右子树为空
+            {
+                if (!(x = x->succ()))
+                    break;        //回溯
+                backtrack = true; //开启回溯标志
+            }
+        }
+    }
+}

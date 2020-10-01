@@ -83,7 +83,8 @@ void BinTree<T>::updateHeightAbove(BinNodePosi(T) x) //更新v及祖先的高度
 {
     while (x)
     {
-        updateHeight(x);
+        if (x->height == updateHeight(x))
+            break;
         x = x->parent;
     } //O(n = depth(x))
 }
