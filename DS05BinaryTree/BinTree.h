@@ -1,7 +1,7 @@
 #include <iostream>
 #include "../DS04Stack-Queue/Stack.h"
 #include "../DS04Stack-Queue/Queue.h"
-#include "BinNode.h"
+#include "./BinNode.h"
 template <typename T>
 class BinTree //二叉树模板类
 {

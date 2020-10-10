@@ -1,4 +1,4 @@
-#include "BinTree.h"
+#include "./BinTree.h"
 
 //递归实现
 template <typename T, typename VST>
