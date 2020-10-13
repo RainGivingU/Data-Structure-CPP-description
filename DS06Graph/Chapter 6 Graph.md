@@ -70,20 +70,6 @@
 ### 6.2.2 Graph模板类
 
 ```cpp
-typedef enum
-{
-    UNDISCOVERED,
-    DISCOVERED,
-    VISITED
-} VStatus; //顶点状态
-typedef enum
-{
-    UNDETERMINED,
-    TREE,
-    CROSS,
-    FORWARD,
-    BACKWARD
-} EStatus;                          //边状态
 template <typename Tv, typename Te> //顶点类型、边类型
 class Graph
 { //图Graph模板类
@@ -143,4 +129,97 @@ public:                                                 // 顶点
 ```
 
 ## 6.3 邻接矩阵
+
+### 6.3.1 概念
+
+**邻接矩阵(adjacency matrix)**是图ADT最基本的实现方式，使用方阵`A[n][n]`表示由n个顶点构成的图，如果顶点`i`与`j`之间存在邻接关系，那么`A[i][j]`的值为1，反之为0
+
+我们只考察简单图，所以对角线统一设置为0；**空间复杂度为O(n<sup>2</sup>)**，与图中实际边数无关。
+
+![image-20201013195614645](https://i.loli.net/2020/10/13/PcIq8rUZ32vOzFd.png)
+
+> 对应的，还有关联矩阵(incidence matrix)，用二维矩阵记录顶点与边之间的邻接关系，但是它的空间复杂度为O(n*e) = O(n<sup>3</sup>)，在解决某些问题时有效，本章主要考察邻接矩阵
+
+### 6.3.2 实现
+
+#### 顶点
+
+```cpp
+//Vertex
+typedef enum
+{
+    UNDISCOVERED,
+    DISCOVERED,
+    VISITED
+} VStatus; //顶点状态
+template <typename Tv>
+struct Vertex
+{
+    Tv date;
+    int inDegree;
+    int outDegree;
+    VStatus status;       //三种状态
+    int dTime, fTime;     //时间标签
+    int parent;           //遍历树中的父节点
+    int priority;         //在遍历树中的优先级
+    Vertex(Tv const &d) : //构造新顶点
+                          data(d), inDegree(0), outDegree(0), 	status(UNDISCOVERED),
+                          dTime(-1), fTime(-1), parent(-1), priority(INT_MAX)
+    {
+    }
+};
+```
+
+#### 边
+
+```cpp
+//Edge
+typedef enum
+{
+    UNDETERMINED,
+    TREE,
+    CROSS,
+    FORWARD,
+    BACKWARD
+} Etype;    //边状态(在遍历树中的类型)    
+template <typename Te>
+struct Edge
+{
+    Te data;                   //数据
+    int weight;                //权重
+    Etype type;                //在遍历树中所属的类型
+    Edge(Te const &d, int w) : //构造新边
+                               data(d), weight(w), type(UNDETERMINED)
+    {
+    }
+};
+```
+
+#### 邻接矩阵
+
+- 顶点集：一组顶点所构成的向量，向量长度即顶点规模
+- 边集：某一顶点关联的所有边构成一个向量（该向量长度为n），由一组这样的向量（有n个顶点即有n个这样的向量）又构成的向量成边集；这样形成的二维矩阵就是邻接矩阵
+
+得益于我们在Vector一章中重载了操作符`[]`，我们可以用`E[i][j]`指代顶点`i`与`j`之间潜在（是否存在未知）的边，并对其进行操作
+
+```cpp
+//GraphMatrix邻接矩阵
+template <typename Tv, typename Te>
+class GraphMatrix : public Graph<Tv, Te>
+{
+private:
+    Vector<Vector<Tv>> V;          //顶点集
+    Vector < Vector<Edge<Te> *> E; //边集
+public:
+    GraphMatrix() { n = e = 0; } //构造
+    ~GraphMatrix()               //析构
+    {
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < n; k++)
+                delete E[j][k]; //清除所有动态申请的边记录
+    }
+};
+```
+
+#### 静态操作接口
 

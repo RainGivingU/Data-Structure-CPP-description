@@ -1,6 +1,6 @@
 #include <iostream>
 #include "../DS04Stack-Queue/Stack.h"
-
+#include "../DS02Vector/vector.h"
 typedef enum
 {
     UNDISCOVERED,
@@ -14,7 +14,7 @@ typedef enum
     CROSS,
     FORWARD,
     BACKWARD
-} EStatus;                          //边状态
+} Etype;                            //边状态(在遍历树中所属的类型)
 template <typename Tv, typename Te> //顶点类型、边类型
 class Graph
 { //图Graph模板类
@@ -70,4 +70,62 @@ public:                                                 // 顶点
     void dijkstra(int);    //最短路径Dijkstra算法
     template <typename PU>
     void pfs(int, PU); //优先级搜索框架
+};
+
+//Vertex
+template <typename Tv>
+struct Vertex
+{
+    Tv date;
+    int inDegree;
+    int outDegree;
+    VStatus status;       //三种状态
+    int dTime, fTime;     //时间标签
+    int parent;           //遍历树中的父节点
+    int priority;         //在遍历树中的优先级
+    Vertex(Tv const &d) : //构造新顶点
+                          data(d), inDegree(0), outDegree(0), status(UNDISCOVERED),
+                          dTime(-1), fTime(-1), parent(-1), priority(INT_MAX)
+    {
+    }
+};
+
+//Edge
+template <typename Te>
+struct Edge
+{
+    Te data;                   //数据
+    int weight;                //权重
+    Etype type;                //在遍历树中所属的类型
+    Edge(Te const &d, int w) : //构造新边
+                               data(d), weight(w), type(UNDETERMINED)
+    {
+    }
+};
+
+//GraphMatrix邻接矩阵
+template <typename Tv, typename Te>
+class GraphMatrix : public Graph<Tv, Te>
+{
+private:
+    Vector<Vector<Tv>> V;          //顶点集
+    Vector < Vector<Edge<Te> *> E; //边集
+public:
+    GraphMatrix() { n = e = 0; } //构造
+    ~GraphMatrix()               //析构
+    {
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < n; k++)
+                delete E[j][k]; //清除所有动态申请的边记录
+    }
+
+    //静态操作接口
+    Tv &vertex(int i) { return V[i].data; }         //数据
+    int inDegree(int i) { return V[i].inDegree; }   //入度
+    int outDegree(int i) { return V[i].outDegree; } //出度
+    VStatus &status(int i) { return V[i].status; }  //状态
+    int &dTime(int i) { return V[i].dTime; }        //时间标签dTime
+    int &fTime(int i) { return V[i].fTime; }        //时间标签fTime
+    int &parent(int i) { return V[i].parent; }      //在遍历树中的父亲
+    int &priority(int i) { return V[i].priority; }  //优先级数
 };
