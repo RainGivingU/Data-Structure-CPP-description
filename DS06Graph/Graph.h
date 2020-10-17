@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../DS04Stack-Queue/Stack.h"
+#include "../DS04Stack-Queue/Queue.h"
 #include "../DS02Vector/vector.h"
 typedef enum
 {
@@ -14,13 +14,14 @@ typedef enum
     CROSS,
     FORWARD,
     BACKWARD
-} Etype;                            //边状态(在遍历树中所属的类型)
+} Etype; //边状态(在遍历树中所属的类型)
+
 template <typename Tv, typename Te> //顶点类型、边类型
 class Graph
 { //图Graph模板类
 private:
-    void reset()
-    { //所有顶点、边的辅助信息复位
+    void reset() //所有顶点、边的辅助信息复位
+    {
         for (int i = 0; i < n; i++)
         { //所有顶点的
             status(i) = UNDISCOVERED;
@@ -108,8 +109,8 @@ template <typename Tv, typename Te>
 class GraphMatrix : public Graph<Tv, Te>
 {
 private:
-    Vector<Vector<Tv>> V;          //顶点集
-    Vector < Vector<Edge<Te> *> E; //边集
+    Vector<Vector<Tv>> V;         //顶点集
+    Vector<Vector<Edge<Te> *>> E; //边集
 public:
     GraphMatrix() { n = e = 0; } //构造
     ~GraphMatrix()               //析构
@@ -119,7 +120,8 @@ public:
                 delete E[j][k]; //清除所有动态申请的边记录
     }
 
-    //静态操作接口
+    //简单接口
+    //顶点的读写
     Tv &vertex(int i) { return V[i].data; }         //数据
     int inDegree(int i) { return V[i].inDegree; }   //入度
     int outDegree(int i) { return V[i].outDegree; } //出度
@@ -128,4 +130,86 @@ public:
     int &fTime(int i) { return V[i].fTime; }        //时间标签fTime
     int &parent(int i) { return V[i].parent; }      //在遍历树中的父亲
     int &priority(int i) { return V[i].priority; }  //优先级数
+    //边的读写
+    bool exists(int i, int j) //判断边(i, j)是否存在
+    {
+        return ((0 < i || 0 == i) && i < n && (0 < j || 0 == j) && j < n && E[i][j] != NULL);
+    }
+    Te &edge(int i, int j) //边的数据,O(1)
+    {
+        return E[i][j]->data;
+    }
+    Etype &type(int i, int j) //边的类型,O(1)
+    {
+        return E[i][j]->type;
+    }
+    int &weight(int i, int j) //边的权重,O(1)
+    {
+        return E[i][j]->weight;
+    }
+    //邻点枚举，对于任意顶点i，自顶点j开始，枚举其所有邻接顶点,O(n)
+    int firstNbr(int i) { return nextNbr(i, n); }
+    int nextNbr(int i, int j)
+    {
+        while ((-1 < j) && !exists(i, --j))
+            ;     //查找到第一个存在的邻居后停止
+        return j; //返回这个邻居顶点
+    }
+
+    //复杂接口
+    //边的插入
+    void insert(Te const &edge, int w, int i, int j)
+    {
+        if (exists(i, j))
+            return;                      //忽略已有边
+        E[i][j] = new Edge<Te>(edge, w); //创建新边，data为edge，权重为w
+        e++;                             //更新边计数
+        V[i].outDegree++;                //更新顶点i的出度
+        V[j].inDegree++;                 //更新顶点j的入度
+    }
+    //边的删除
+    Te remove(int i, int j) //删除顶点i和j之间的联边(断言此边存在)
+    {
+        Te eBak = edge(i, j); //备份边(i, j)的信息
+        delete E[i][j];
+        E[i][j] = NULL;   //删除边(i, j)
+        e--;              //更新边的计数
+        V[i].outDegree--; //更新顶点i的出度
+        V[j].inDegree--;  //更新顶点j的入度
+        return eBak;      //返回被删除边的信息
+    }
+    //顶点插入
+    Te insert(Tv const &vertex) //插入顶点，返回编号
+    {
+        //①
+        for (int j = 0; j < n; j++)
+            E[j].insert(NULL);
+        n++;
+
+        E.insert(Vector<Edge<Te> *>(n, n, NULL)); //②③
+        return V.insert(Vertex<Tv>(vertex));      //④
+    }
+    //顶点删除
+    Tv remove(int i) //删除顶点及其关联边，返回该顶点信息
+    {
+        for (int j = 0; j < n; j++)
+            if (exists(i, j)) //删除所有出边，即②
+            {
+                delete E[i][j];
+                V[j].inDegree--;
+                e--;
+            }
+        E.remove(i);
+        n--;                        //删除第i行，即③
+        Tv vBak = vertex(i);        //备份顶点i
+        V.remove(i);                //删除顶点i，即④
+        for (int j = 0; j < n; j++) //删除所有入边，即①
+            if (Edge<Te> *x = E[j].remove(i))
+            {
+                delete x;
+                V[j].outDegree--;
+                e--;
+            }
+        return vBak; //返回被删除顶点的信息
+    }
 };

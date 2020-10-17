@@ -198,7 +198,7 @@ struct Edge
 #### 邻接矩阵
 
 - 顶点集：一组顶点所构成的向量，向量长度即顶点规模
-- 边集：某一顶点关联的所有边构成一个向量（该向量长度为n），由一组这样的向量（有n个顶点即有n个这样的向量）又构成的向量成边集；这样形成的二维矩阵就是邻接矩阵
+- 边集：某一顶点关联的所有边构成一个向量（该向量长度为n），由一组这样的向量（有n个顶点即有n个这样的向量）又构成的向量为边集；这样形成的二维矩阵就是邻接矩阵
 
 得益于我们在Vector一章中重载了操作符`[]`，我们可以用`E[i][j]`指代顶点`i`与`j`之间潜在（是否存在未知）的边，并对其进行操作
 
@@ -222,4 +222,276 @@ public:
 ```
 
 #### 静态操作接口
+
+```cpp
+//顶点的读写
+Tv &vertex(int i) { return V[i].data; }         //数据
+int inDegree(int i) { return V[i].inDegree; }   //入度
+int outDegree(int i) { return V[i].outDegree; } //出度
+VStatus &status(int i) { return V[i].status; }  //状态
+int &dTime(int i) { return V[i].dTime; }        //时间标签dTime
+int &fTime(int i) { return V[i].fTime; }        //时间标签fTime
+int &parent(int i) { return V[i].parent; }      //在遍历树中的父亲
+int &priority(int i) { return V[i].priority; }  //优先级数
+//边的读写
+bool exists(int i, int j) //判断边(i, j)是否存在
+{
+    return ((0 < i || 0 == i) && i < n && (0 < j || 0 == j) && j < n && E[i][j] != NULL);
+}
+Te &edge(int i, int j) //边的数据,O(1)
+{
+    return E[i][j]->data;
+}
+Etype &type(int i, int j) //边的类型,O(1)
+{
+    return E[i][j]->type;
+}
+int &weight(int i, int j) //边的权重,O(1)
+{
+    return E[i][j]->weight;
+}
+//邻点枚举，对于任意顶点i，自顶点j开始，枚举其所有邻接顶点,O(n)
+int firstNbr(int i) { return nextNbr(i, n); }
+int nextNbr(int i, int j)
+{
+    while ((-1 < j) && !exists(i, --j))
+        ;     //查找到第一个存在的邻居后停止
+    return j; //返回这个邻居顶点
+}
+```
+
+#### 边的动态操作
+
+边的动态操作不会改变矩阵的规模，实现方法比较简单
+
+```cpp
+//边的插入
+void insert(Te const &edge, int w, int i, int j)
+{
+    if (exists(i, j))
+        return;                      //忽略已有边
+    E[i][j] = new Edge<Te>(edge, w); //创建新边，data为edge，权重为w
+    e++;                             //更新边计数
+    V[i].outDegree++;                //更新顶点i的出度
+    V[j].inDegree++;                 //更新顶点j的入度
+}
+//边的删除
+Te remove(int i, int j) //删除顶点i和j之间的联边(断言此边存在)
+{
+    Te eBak = edge(i, j); //备份边(i, j)的信息
+    delete E[i][j];
+    E[i][j] = NULL;   //删除边(i, j)
+    e--;              //更新边的计数
+    V[i].outDegree--; //更新顶点i的出度
+    V[j].inDegree--;  //更新顶点j的入度
+    return eBak;      //返回被删除边的信息
+}
+```
+
+#### 顶点的动态操作
+
+注意矩阵规模的变化
+
+我们假定顶点插入前的矩阵如下
+
+![image-20201017110828914](https://i.loli.net/2020/10/17/7MVxaZpWEOmwP2r.png)
+
+①矩阵的每一行都要增加一个元素，相对于矩阵增加了一列
+
+②矩阵要增加一行，对应增加的顶点的邻接顶点集
+
+③边集E增加一个元素(向量，即②中增加的一行)
+
+④顶点集V要增加一个元素
+
+![image-20201017111306099](https://i.loli.net/2020/10/17/FTVLgDIbz9xH5cr.png)
+
+```cpp
+//顶点插入
+Te insert(Tv const &vertex) //插入顶点，返回编号
+{
+     //①
+    for (int j = 0; j < n; j++)
+    	E[j].insert(NULL);
+    n++;
+
+    E.insert(Vector<Edge<Te> *>(n, n, NULL)); //②③
+    return V.insert(Vertex<Tv>(vertex));      //④
+}
+```
+
+顶点的删除实际是逆向进行上面的过程
+
+```cpp
+//顶点删除
+Tv remove(int i) //删除顶点及其关联边，返回该顶点信息
+{
+    for (int j = 0; j < n; j++)
+        if (exists(i, j)) //删除所有出边，即②
+        {
+            delete E[i][j];
+            V[j].inDegree--;
+            e--;
+        }
+    E.remove(i);
+    n--;                        //删除第i行，即③
+    Tv vBak = vertex(i);        //备份顶点i
+    V.remove(i);                //删除顶点i，即④
+    for (int j = 0; j < n; j++) //删除所有入边，即①
+        if (Edge<Te> *x = E[j].remove(i))
+        {
+            delete x;
+            V[j].outDegree--;
+            e--;
+        }
+    return vBak; //返回被删除顶点的信息
+}
+```
+
+### 6.3.3 性能分析
+
+#### 优点
+
+- 直观易理解与实现
+- 适用范围广泛
+- 很多操作可以在常数时间内完成
+- 扩展性，得益于Vector
+
+#### 缺点
+
+- O(n<sup>2</sup>)空间，与实际边数无关，当e << n<sup>2</sup>时有很大的浪费
+
+  > **平面图(planar graph)**指一类可以嵌入平面(但边保证不相交)的图，下面四个栗子中前两个为平面图<img src="https://i.loli.net/2020/10/17/Wq4M9DFPwZjozQJ.png" alt="image-20201017114142961" style="zoom:50%;" />
+  >
+  > 可以证明，e ≤ 3*n - 6 = O(n) << O(n<sup>2</sup>)，此时的空间利用率约为1/n，这是极差的
+
+## 6.6 广度优先搜索(Breadth-First Search)
+
+#### 化繁为简
+
+在二叉树中我们介绍了各种遍历算法将这种半线性结构顺利转化为了线性结构，对于图这种非线性结构，我们通过遍历使其转化为半线性结构，也就是原图中的边和顶点构成一棵**支撑树（森林）**，称作**遍历树**，由于图的遍历更加强调甄别和查找，所以也称作**图搜索**。
+
+#### 策略
+
+始自顶点s的广度优先搜索
+
+1. 访问顶点s
+
+2. 依次访问s所有未访问的邻接顶点（图中内圈蓝色点）
+
+3. 依次访问它们未访问的邻接顶点（图中红色点）
+
+4. ...................................................
+
+   直至**没有尚未访问**的邻接节点，结果得到的图是一个无向连通图
+
+![image-20201017165651646](https://i.loli.net/2020/10/17/MI4XnCA7JcN8R5i.png)
+
+容易发现，这实际上就是一棵**支撑树(BFS tree)**，策略也完全等同于树的层次遍历
+
+#### 实现
+
+图中每一个顶点都会经历Undiscovered（初始化）`->` Discovered（已入队）`->`Visited（`for`循环结束）的过程
+
+```cpp
+template <typename Tv, typename Te>
+void Graph<Tv, Te>::BFS(int v, int &clock)
+{
+    Queue<int> Q;           //初始化一个队列
+    status(v) = DISCOVERED; //顶点v的状态转换为刚被发现
+    Q.enqueue(v);           //顶点v入队
+
+    while (!Q.empty()) //反复地
+    {
+        int v = Q.dequeue();                                  //取出队列首顶点v
+        dTime(v) = ++clock;                                   //打上时间标签，表示当前的时间进度
+        for (int u = firstNbr(v); - 1 < u; u = nextNbr(v, u)) //考察v的每一个邻居u
+        {
+            //视情况分别处理
+            if (UNDISCOVERED == status(u)) //若u尚未被发现过
+            {
+                status(u) = DISCOVERED; //发现该顶点
+                Q.enqueue(u);           //入队
+                status(v, u) = TREE;    //这条边必定可以引入支撑树
+                parent(u) = v;          //设置u的父亲为v
+            }
+            else                      //u已被发现，即已在队列中
+                status(v, u) = CROSS; //直接将这类边归为跨边
+        }
+        status(v) = VISITED; //所有邻居都被遍历，则v的状态转换为visited
+    }
+}
+```
+
+#### 实例
+
+![image-20201017194640652](https://i.loli.net/2020/10/17/IehKoJYt7E8uSFA.png)
+
+![image-20201017194702564](https://i.loli.net/2020/10/17/8VHghDd95aG6lAf.png)
+
+#### 多连通情况
+
+上述算法的实现前提是图中所有顶点在一个连通域中，否则将无法遍历图中所有顶点，下面解决这个问题
+
+![image-20201017194744600](https://i.loli.net/2020/10/17/nBghyz4QtiHwNAj.png)
+
+```cpp
+template <typename Tv, typename Te> //顶点类型，边类型
+void Graph<Tv, Te>::bfs(int s)      //s为起始顶点
+{
+    //初始化
+    reset();
+    int clock = 0;
+    int v = s;
+    do //逐一检查所有顶点
+    {
+        if (UNDISCOVERED == status(v)) //一旦遇到尚未发现的顶点
+            BFS(v, clock);             //从该顶点出发启动一次BFS
+    } while (s != (v = (++v % n)));    //按序号访问，不重不漏
+    //bfs自身累计仅需线性时间
+}
+```
+
+#### 复杂度分析
+
+我们主要分析以下算法主体部分：
+
+```cpp
+while (!Q.empty()) //反复地
+{
+    int v = Q.dequeue();                                  //取出队列首顶点v
+    dTime(v) = ++clock;                                   //打上时间标签，表示当前的时间进度
+    for (int u = firstNbr(v); - 1 < u; u = nextNbr(v, u)) //考察v的每一个邻居u
+    {
+        //视情况分别处理
+        if (UNDISCOVERED == status(u)) //若u尚未被发现过
+        {
+            status(u) = DISCOVERED; //发现该顶点
+            Q.enqueue(u);           //入队
+            status(v, u) = TREE;    //这条边必定可以引入支撑树
+            parent(u) = v;          //设置u的父亲为v
+         }
+         else                      //u已被发现，即已在队列中
+            status(v, u) = CROSS; //直接将这类边归为跨边
+     }
+}
+```
+
+##### `while`循环
+
+`while`循环执行的次数等于`dequeue()`执行的次数
+
+根据每个顶点都会入队且仅入队一次的特点可知，`enqueue()`会执行**O(n)**次，相应地`dequeue()`也会执行**O(n)**次至队列为空，那么`while`循环也就恰好执行**O(n)**次
+
+##### `for`循环
+
+本质上看，`for`循环就是对`v`所在行向量进行扫描，每个行向量规模为**O(n)**，结合`while`循环，for循环执行次数将高达**理论复杂度O(n<sup>2</sup>)；**边存在时才会进入内循环，即内循环总共执行次数为**O(e)**，那么整体复杂度为O(n<sup>2</sup> + e) == **O(n<sup>2</sup>)**，这只具有理论意义
+
+实际情况下，由于`for`循环中对行向量的查找是极其简单的基本操作，且行向量在物理上是连续的可以激活系统高速缓存状态，**这里的O(n)可以直接视为O(1)**，那么**实际上BFS算法的复杂度为O(n + e)**
+
+#### 最短路径
+
+![image-20201017202500259](https://i.loli.net/2020/10/17/9o8PVaMWvuEjicf.png)
+
+
 
