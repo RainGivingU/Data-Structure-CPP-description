@@ -367,11 +367,11 @@ Tv remove(int i) //删除顶点及其关联边，返回该顶点信息
 
 ## 6.6 广度优先搜索(Breadth-First Search)
 
-#### 化繁为简
+### 化繁为简
 
 在二叉树中我们介绍了各种遍历算法将这种半线性结构顺利转化为了线性结构，对于图这种非线性结构，我们通过遍历使其转化为半线性结构，也就是原图中的边和顶点构成一棵**支撑树（森林）**，称作**遍历树**，由于图的遍历更加强调甄别和查找，所以也称作**图搜索**。
 
-#### 策略
+### 策略
 
 始自顶点s的广度优先搜索
 
@@ -389,7 +389,7 @@ Tv remove(int i) //删除顶点及其关联边，返回该顶点信息
 
 容易发现，这实际上就是一棵**支撑树(BFS tree)**，策略也完全等同于树的层次遍历
 
-#### 实现
+### 实现
 
 图中每一个顶点都会经历Undiscovered（初始化）`->` Discovered（已入队）`->`Visited（`for`循环结束）的过程
 
@@ -423,17 +423,19 @@ void Graph<Tv, Te>::BFS(int v, int &clock)
 }
 ```
 
-#### 实例
+### 实例
 
 ![image-20201017194640652](https://i.loli.net/2020/10/17/IehKoJYt7E8uSFA.png)
 
 ![image-20201017194702564](https://i.loli.net/2020/10/17/8VHghDd95aG6lAf.png)
 
-#### 多连通情况
+### 多连通情况
 
 上述算法的实现前提是图中所有顶点在一个连通域中，否则将无法遍历图中所有顶点，下面解决这个问题
 
 ![image-20201017194744600](https://i.loli.net/2020/10/17/nBghyz4QtiHwNAj.png)
+
+多个遍历树构成了一个**遍历森林**
 
 ```cpp
 template <typename Tv, typename Te> //顶点类型，边类型
@@ -452,7 +454,7 @@ void Graph<Tv, Te>::bfs(int s)      //s为起始顶点
 }
 ```
 
-#### 复杂度分析
+### 复杂度分析
 
 我们主要分析以下算法主体部分：
 
@@ -477,21 +479,158 @@ while (!Q.empty()) //反复地
 }
 ```
 
-##### `while`循环
+#### `while`循环
 
 `while`循环执行的次数等于`dequeue()`执行的次数
 
 根据每个顶点都会入队且仅入队一次的特点可知，`enqueue()`会执行**O(n)**次，相应地`dequeue()`也会执行**O(n)**次至队列为空，那么`while`循环也就恰好执行**O(n)**次
 
-##### `for`循环
+#### `for`循环
 
 本质上看，`for`循环就是对`v`所在行向量进行扫描，每个行向量规模为**O(n)**，结合`while`循环，for循环执行次数将高达**理论复杂度O(n<sup>2</sup>)；**边存在时才会进入内循环，即内循环总共执行次数为**O(e)**，那么整体复杂度为O(n<sup>2</sup> + e) == **O(n<sup>2</sup>)**，这只具有理论意义
 
 实际情况下，由于`for`循环中对行向量的查找是极其简单的基本操作，且行向量在物理上是连续的可以激活系统高速缓存状态，**这里的O(n)可以直接视为O(1)**，那么**实际上BFS算法的复杂度为O(n + e)**
 
-#### 最短路径
+### 最短路径
 
 ![image-20201017202500259](https://i.loli.net/2020/10/17/9o8PVaMWvuEjicf.png)
 
+## 6.7 深度优先搜索(Depth-First Search)
 
+### 策略
 
+**DFS(s)**	//始自顶点s的深度优先搜索
+
+1. 访问顶点s
+2. - 若s尚有未被访问的邻居，则任取其一u，递归执行DFS(u)
+   - 否则，返回
+
+3. 若此时图中尚有顶点未被访问
+   - 任取这样的一个顶点作为起始点
+   - 重复2中过程
+   - 直到所有点都被访问
+
+2中的返回，即回溯，会再次判断s是否尚有未被访问的邻居；如果任取的邻居2是已访问过的，那么将特殊标记出来而不计在支撑树(DFS Tree)中
+
+![image-20201018174554388](https://i.loli.net/2020/10/18/WmDSdUFi6hn9gMb.png)
+
+### 框架
+
+```cpp
+template <typename Tv, typename Te> //顶点类型、边类型
+void Graph<Tv, Te>::DFS(int v, int &clock)
+{
+    dTime(v) = ++clock;
+    status(v) = DISCOVERED; //发现当前顶点v
+    for (int u = firstNbr(v); - 1 < u; u = nextNbr(v, u))   //考察v的每一邻居u
+    {
+        //视u的状态分别处理
+        switch (status(u)) 
+        {
+        case UNDISCOVERED:    
+            /* ... */
+            break;
+        case DISCOVERED: 
+            /* ... */
+            break;
+        default:  //即VISITED
+            /* ... */
+            break;
+        }
+    }
+    status(v) = VISITED;    //至此当前顶点v访问完毕
+    fTime(v) = ++clock; 
+}
+```
+
+### 不同状态，分别处理
+
+#### UNDISCOVERED
+
+u就是那个尚未发现的邻居，将`[v, u]`这条边引入支撑树，然后直接递归执行**DFS(u)**
+
+```cpp
+case UNDISCOVERED:     //u尚未发现，即支撑树可以在此拓展
+    type(v, u) = TREE; //[v, u]边归为TREE
+    parent(u) = v;     //u的父亲设为v
+    DFS(u, clock);     //从u开始递归
+    break;
+```
+
+#### DISCOVERED
+
+u已被发现但尚未访问完毕，那么u应该是v的祖先且`[u, v]`这条边已被引入支撑树，所以将`[v, u]`设置为**回边(backward)**
+
+```cpp
+case DISCOVERED:           //u已被发现但尚未访问完毕
+	type(v, u) = BACKWARD; //[v, u]应属于被后代指向的祖先，归为BACKWARD
+    break;
+```
+
+#### VSITED
+
+> dTime和fTime记录了每个顶点的被发现和被访问完成的时刻，区间[dTime(v), fTime(v)]即是v的活跃期，而任意顶点v和u之间是否存在祖先/后代的血缘关系，完全取决于二者的活跃期是否相包含，详见**嵌套引理**
+
+u已经访问完毕（那么fTime(u)必然要小于fTime(v)，即只有可能v是u的祖先，v的活跃期可能包含u的活跃期），我们要通过对比u, v谁更早被发现（即时间标签dTime谁大谁小）来判断`[v, u]`边的类型是
+
+- 若dTime(v) < dTime(u)，那么v必是u的祖先，设置[v, u]边为**前向边(FORWARD)**
+- 否则，v和u没有血缘关系，来自不同的独立分支，设置`[v, u]`边为跨边**(CROSS)**
+
+```cpp
+default: //status(u) = VISITED
+	type(v, u) = dTime(v) < dTime(u) ? FORWARD : CROSS;
+	break;
+```
+
+### 多可达域情况
+
+效仿BFS中的做法，我们得到以下解决方法
+
+```cpp
+template <typename Tv, typename Te>
+void Graph<Tv, Te>::dfs(int s)
+{
+    //初始化
+    reset();
+    int clock = 0;
+    int v = s;
+    do
+    {
+        if(UNDISCOVERED == status(v))   //一旦遇到尚未发现的顶点
+            DFS(v, clock);  //从该顶点出发启动一次DFS
+    } while (s != (v = (++v % n))); //按序号访问，不重不漏
+    
+}
+```
+
+### 实例
+
+#### 无向图例子
+
+![image-20201018192548392](https://i.loli.net/2020/10/18/DtWHfoyuTM4anF3.png)
+
+![image-20201018192603365](https://i.loli.net/2020/10/18/6YmJ2nxr3cMTu8w.png)
+
+![image-20201018192621753](https://i.loli.net/2020/10/18/8XAdeTnuWYEfQiz.png)
+
+![image-20201018192640933](https://i.loli.net/2020/10/18/pjUG4YzDHyNB58R.png)
+
+#### 有向图例子
+
+![image-20201018192959955](C:%5CUsers%5CspringmorningQ%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20201018192959955.png)
+
+![image-20201018193029209](https://i.loli.net/2020/10/18/UzMWClGnN3baFXt.png)
+
+![image-20201018193048069](https://i.loli.net/2020/10/18/yMoqIBDx6RVTXUC.png)
+
+![image-20201018193102196](https://i.loli.net/2020/10/18/TSNZmaL4FgCOR72.png)
+
+![image-20201018193114703](https://i.loli.net/2020/10/18/PipO1Lb7qaZcBHN.png)
+
+![image-20201018193128440](https://i.loli.net/2020/10/18/zOlfNDE2bwqaSYi.png)
+
+![image-20201018193146010](https://i.loli.net/2020/10/18/kgFObd92NSJcvKR.png)
+
+### 嵌套引理
+
+![image-20201018193247129](https://i.loli.net/2020/10/18/BFQvpal64mKX9YI.png)
