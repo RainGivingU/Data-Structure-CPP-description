@@ -617,7 +617,7 @@ void Graph<Tv, Te>::dfs(int s)
 
 #### 有向图例子
 
-![image-20201018192959955](C:%5CUsers%5CspringmorningQ%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20201018192959955.png)
+![image-20201018192959955](https://i.loli.net/2020/10/18/Dg6UEQ9GrzFIWc1.png)
 
 ![image-20201018193029209](https://i.loli.net/2020/10/18/UzMWClGnN3baFXt.png)
 
