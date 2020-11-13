@@ -573,8 +573,8 @@ case DISCOVERED:           //u已被发现但尚未访问完毕
 
 u已经访问完毕（那么fTime(u)必然要小于fTime(v)，即只有可能v是u的祖先，v的活跃期可能包含u的活跃期），我们要通过对比u, v谁更早被发现（即时间标签dTime谁大谁小）来判断`[v, u]`边的类型是
 
-- 若dTime(v) < dTime(u)，那么v必是u的祖先，设置[v, u]边为**前向边(FORWARD)**
-- 否则，v和u没有血缘关系，来自不同的独立分支，设置`[v, u]`边为跨边**(CROSS)**
+- 若dTime(v) < dTime(u)，那么v必是u的祖先，设置`[v, u]`边为**前向边(FORWARD)**
+- 否则，v和u没有血缘关系，来自不同的独立分支，设置`[v, u]`边为**跨边(CROSS)**
 
 ```cpp
 default: //status(u) = VISITED
