@@ -1,4 +1,5 @@
 #include "../DS05BinaryTree/BinTree.h"
+
 template <typename T>
 class BST : public BinTree<T> //由BinTree派生
 {
@@ -88,4 +89,59 @@ static BinNodePosi(T) removeAt(BinNodePosi(T) & x, BinNodePosi(T) & hot)
     release(w->data);
     release(w);  //释放被摘除节点
     return succ; //返回接替者
+}
+
+template <typename T>
+BinNodePosi(T) BST<T>::connect34(
+    BinNodePosi(T) a, BinNodePosi(T) b, BinNodePosi(T) c,
+    BinNodePosi(T) T0, BinNodePosi(T) T1, BinNodePosi(T) T2, BinNodePosi(T) T3)
+{
+    a->lChild = T0;
+    if (T0)
+        T0->parent = a;
+    a->rChild = T1;
+    if (T1)
+        T1->parent = a;
+    c->lChild = T2;
+    if (T2)
+        T2->parent = c;
+    c->rChild = T3;
+    if (T3)
+        T3->parent = c;
+    b->lChild = a;
+    a->parent = b;
+    b->rChild = c;
+    c->parent = b;
+    updateHeight(a);
+    updateHeight(c);
+    updateHeight(b);
+    return b;
+}
+
+template <typename T>
+BinNodePosi(T) BST<T>::rotateAt(BinNodePosi(T) v)
+{
+    BinNodePosi(T) p = v->parent, g = p->parent;
+    if (IsLChild(*p))     //zig
+        if (IsLChild(*v)) //zig-zig
+        {
+            p->parent = g->parent; //向上联接
+            return connect34(v, p, g, v->lChild, v->rChild, p->rChild, g->rChild);
+        }
+        else //zag-zig(先zag再zig)注意，双旋时v成为该局部的根(即b)
+        {
+            v->parent = g->parent;
+            return connect34(p, v, g, p->lChild, v->lChild, v->rChild, g->rChild);
+        }
+    else                  //zag
+        if (IsRChild(*p)) //zag-zag
+    {
+        p->parent = g->parent;
+        return connect34(g, p, v, g->lChild, p->lChild, v->lChild, v->rChild);
+    }
+    else //zig-zag(先zig再zag)
+    {
+        v->parent = g->parent;
+        return connect34(g, v, p, g->lChild, v->lChild, v->rChild, p->rChild);
+    }
 }

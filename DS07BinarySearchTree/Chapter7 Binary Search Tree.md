@@ -51,7 +51,7 @@ BST和二叉树的不同在于，BST中的任一节点
 
 BST实例：
 
-![image-20201113112334574](https://i.loli.net/2020/11/13/Xj8JHUnlaQdMhWk.png)![image-20201113112605969](https://i.loli.net/2020/11/13/OFPbzyvKWdmjUHn.png)
+![image-20201113112605969](https://i.loli.net/2020/11/13/OFPbzyvKWdmjUHn.png)![image-20201114182942551](https://i.loli.net/2020/11/14/MTjB4cKsfqk8YQS.png)
 
 #### 单调性
 
@@ -247,7 +247,7 @@ else
 
 主要来源有`succ()`和`search()`，它们的时间消耗都正比于`x`的高度，总体复杂度为**O(h)**
 
-## 7.3 平衡二叉搜索树
+## 7.3 平衡二叉搜索树(Balanced BST)
 
 ### 7.3.1 期望树高
 
@@ -269,21 +269,334 @@ else
 
 ### 7.3.2 理想与适度
 
+节点数目固定时，兄弟子树的高度越接近**平衡**，全树也将倾向于**更低**
+
+由n个节点组成的二叉树，高度不致低于log<sub>2</sub>n，达到这一下界时，被称为**理想平衡**(如完全二叉树CBT)
+
+但是出现理想平衡的概率很低，维护成本很高，不具有现实意义，我们需要适当放松标准
+
+![image-20201114153245010](https://i.loli.net/2020/11/14/5mRIWj6aUYCBuZQ.png)
+
+高度**渐进地**不超过**O(logn)**，称作**适度平衡**
+
+适度平衡的BST称作**平衡二叉搜索树(BBST)**
+
 ### 7.3.3 等价变换
 
-## 7.4 AVL树
+#### 等价BST
+
+**上下可变**（联接关系，继承关系可能发生变化）
+
+**左右不乱**（中序遍历序列完全一致）
+
+![image-20201114154651762](https://i.loli.net/2020/11/14/HyvaD6FNw9zfxUs.png)
+
+#### 限制条件-局部性
+
+后面将要介绍的各种BBST都可视为BST的某一子集，相应地满足精心设计的**限制条件**
+
+- 单次动态修改操作后，至多**O(logn)**处局部不再满足限制条件
+- 可在**O(logn)**时间内，使这些局部（以至全树）重新满足
+
+#### 等价变换+旋转调整
+
+刚刚失衡的BST必可在**O(logn)**甚至**O(1)**次旋转后转换为一棵等价BBST（实际上，经过不超过**O(n)**次旋转，等价BST均可相互转化）
+
+![image-20201114155414209](https://i.loli.net/2020/11/14/wWaMH6EuXoAJq4Z.png)
+
+zig和zag仅涉及**常数**个节点，仅需调整其间的联接关系，均属于**局部的基本操作**
+
+调整之后的v/c深度加/减1,子（全）树高度的变化幅度上下差异**不超过1**
+
+## 7.4 AVL树(a kind of BBST)
+
+![image-20201114174839026](https://i.loli.net/2020/11/14/PfAqwCKQUSnDZE1.png)
+
+我们下面主要有两项任务要完成：
+
+①如何界定满足什么条件下的BST为BBST（前提是BBST的高度在**O(logn)**以下）
+
+②某次操作导致BBST失衡，怎样进行重平衡且复杂度在**O(logn)**以下
+
+##### 什么是AVL树？-平衡因子
+
+Balance Factor：`balFac(v) = height(lChild(v)) - height(rChild(v))`
+
+G.**A**delson-**V**elsky & E.**L**andis(1962)提出AVL树，定义：任一AVL树v满足**|balFac(v)|≤1**
+
+![image-20201114180026870](https://i.loli.net/2020/11/14/FwuRLn3B97pMkNH.png)
 
 ### 7.4.1 适度平衡
 
+AVL是一种达到了**适度平衡（h < O(logn）**的BBST，下面是证明过程
+
+![image-20201114181509496](https://i.loli.net/2020/11/14/cua5bdsM73hKIGw.png)
+
+![image-20201114181533019](C:%5CUsers%5CspringmorningQ%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5Cimage-20201114181533019.png)
+
+Note：注意这里**S(h) = fib(h - 3)**指的高度不包含根，即只有一个节点的树的高度记为0，空树高度记为-1
+
 ### 7.4.2 重平衡
+
+#### 接口
+
+```cpp
+#include "BST.h"
+#define Balanced(x) \
+    (stature((x).lChild) == stature((x).rChild)) //理想平衡
+#define BalFac(x) \
+    (stature((x).lChild) - stature((x).rChild)) //平衡因子
+#define AvlBalanced(x) \
+    ((-2 < BalFax(x)) && (BalFac(x) < 2)) //AVL平衡条件
+
+template <typename T>
+class AVL : public BST<T> //BST派生
+{
+public:
+    //search()等接口直接沿用
+    BinNodePosi(T) insert(const T &); //重写插入
+    bool remove(const T &);           //重写删除
+};
+```
+
+#### 失衡
+
+按照上面的接口对AVL树进行动态操作时，AVL的平衡性有可能被破坏！
+
+因节点`x`的插入或删除而暂时失衡的节点构成失衡节点集，记作**UT(x)**
+
+![image-20201114191207491](https://i.loli.net/2020/11/15/p8Cwl9aOsLWnSbX.png)
+
+对于`insert()`，我们发现很有可能会导致插入节点的一系列祖先失衡，UT(x)包含多个节点
+
+而对于`remove()`，仅可能会导致某个祖先发生失衡看，UT(x)仅含单个节点（因为删除的节点如果会使它的父亲失衡，它必然存在于它父亲的较矮的子树中，删除它对它父亲的高度没有影响，其他祖先同理）
+
+对于除动态操作对象的祖先之外的节点，均不会受到影响，不会失衡
+
+下面将介绍这些动态操作后，如何使之重平衡
 
 ### 7.4.3 插入
 
+#### 失衡节点集
+
+思考一下，我们发现引入新节点`x`后，**UT(x)中的节点都是`x`的祖先，且高度不会低于`x`的祖父**
+
+我们将UT(x)中的最深者记为`g(x)`，在`x`与`g(x)`的通路上，设`p`为`g(x)`的孩子，`v`是`p`的孩子（如果`g(x)`恰是`x`的祖父，那么`v`就恰是`x`，否则`v`是`x`的祖先；`p`必是`x`的真祖先；切记，`p`, `v`, `x`都是未失衡的节点）
+
+#### 重平衡
+
+1. 首先要找到如上定义的`g(x)`，方法是由`x`出发沿着`parent`指针上行并核对平衡因子，首个失衡节点就是`g(x)`，原树是BBST，那么这一过程用时**O(logn)**
+2. 然后再找到`p`与`v`，我们注意到，既然是引入了`x`导致的失衡，那么`p`和`v`的高度必不会低于其各自的兄弟，所以反过来由`g(x)`可以找到`p`与`v`
+
+```cpp
+#define tallerChild(x)( \
+    stature((x)->lChild) > stature((x)->rChild) ? (x)->lChild :(   /*左高*/ \
+    stature((x)->lChild) < stature((x)->rChild) ? (x)->rChild :(   /*右高*/ \
+    IsLChild(*(x)) ? (x)->lChild : (x)->rChild          /*等高：与父亲x同侧者优先*/ \
+    )\
+    )\
+)
+```
+
+下面，根据节点`g(x)`, `p`, `v`之间的具体联接方向，将采用不同的局部调整方案
+
+#### 单旋
+
+插入的`x`为黄色方块中的任一个，若`v`是`p`的右孩子，`p`是`g`的右孩子，我们只需做一次旋转（单旋）即可
+
+示例中进行的zag(逆时针)旋转可以由以下步骤完成
+
+1. 定义一个`p`的引用`rc`
+2. `p`的左子树`T1`成为`g`的右子树
+3. `g`成为`p`的左孩子
+4. 这个局部子树的根由`g`变为`p`
+
+![image-20201115103156703](https://i.loli.net/2020/11/15/BaeVdCQzfg7DmEP.png)
+
+经过上面的**O(1)**时间的操作，整棵树已恢复为BBST（局部高度恢复到了插入前的状态，`g`上方的失衡祖先必然到达平衡）
+
+#### 双旋
+
+若`v`是`p`的左孩子，`g`是`p`的右孩子，我们需要做两次方向相反的旋转（双旋）
+
+![image-20201115104332060](https://i.loli.net/2020/11/15/WO8t9pZXTSwzrqP.png)
+
+#### 实现
+
+```cpp
+template <typename T>
+BinNodePosi(T) AVL<T>::insert(const T &e)
+{
+    BinNodePosi(T) &x = search(e);
+    if (x)        //若要插入的节点已经存在
+        return x; //直接返回已存在的节点
+    BinNodePosi(T) xx = x = new BinNode<T>(e, _hot);
+    _size++; //创建新节点
+    //此时，若x的父亲_hot增高，则其祖父有可能失衡
+    for (BinNodePosi(T) g = _hot; g; g = g->parent) //从x之父向上检查各代祖先g
+    {
+        if (!AvlBalanced(*g)) //一旦发现g失衡，采用3+4算法使之复衡
+        {
+            FromParentTo(*g) = rotateAt(tallerChild(tallerChild(g))); //重新接入原树
+            break;                                                    //g复衡后局部子树高度复原，则整棵树到达平衡
+        }
+        else                 //g依然平衡
+            updateHeight(g); //更新其高度
+    }
+    return xx; //返回新节点位置
+} //无论e是否存在于原树，AVL::insert(e)->data == e
+```
+
+#### 复杂度分析
+
+插入`x`，在原BBST中查找`g(x)`，用时**O(logn)**，至多进行两次旋转即可使该树恢复平衡，总体复杂度为**O(logn)**
+
 ### 7.4.4 删除
+
+#### 失衡节点集
+
+与插入操作不同，摘除节点`x`后，以及在随后的调整过程中，失衡节点集UT(x)始终至多只含一个节点（可能就是`x`的父亲），该节点`g(x)`若存在，其高度必与失衡前相同（只有删除了`g(x)`较矮子树中的`x`才会使`g(x)`失衡，而这不影响`g(x)`的高度）
+
+#### 重平衡
+
+从`_hot`节点出发沿`parent`指针上行，经过**O(logn)**的时间即可确定`g(x)`的位置，`g(x)`含`x`的子树一定比不含`x`的子树高度小1（这样在删除`x`后才会失衡，高度差变成2了）；
+
+我们设定`g(x)`在不含`x`的那一侧的孩子为`p`（`p`的高度至少为1，即`p`必有孩子）；
+
+若`p`的两个孩子不等高，选高的的孩子做`v`，若等高则选和`p`同向的（均为左孩子或右孩子）
+
+同样，根据节点`g(x)`, `p`, `v`之间的具体联接方向，将采用不同的局部调整方案
+
+#### 单旋
+
+图解：删除的节点位于T3底部，图1中给出的是已删除已失衡的状态，红色节点可能存在可能不存在，两个黄色节点至少存在其中之一
+
+![image-20201115144348542](https://i.loli.net/2020/11/15/QB6dJPslV5n7ZCE.png)
+
+若红色节点不存在，我们可以发现这个**局部子树的高度减少了1**（而非插入中的复原），这可能会导致更高祖先发生失衡，这种失衡可能会随着一次一次的调整向上传递，导致最多可能要做**O(logn)**次调整！
+
+#### 双旋
+
+![image-20201115144627611](https://i.loli.net/2020/11/15/J9Y1VaHPftmBRvF.png)
+
+#### 实现
+
+```cpp
+template <typename T>
+bool AVL<T>::remove(const T &e)
+{
+    BinNodePosi(T) &x = search(e);
+    if(!x)  //目标不存在
+        return false;   //返回删除失败
+    removeAt(x, _hot);  //物理删除x
+    _size--;
+    //从_hot出发逐层向上，依次检查各代祖先g
+    for (BinNodePosi(T) g = _hot; g; g = g->parent)
+    {
+        if(!AvlBalanced(*g))    //一旦发现g失衡，就通过调整恢复平衡
+            g = FromParentTo(*g) = rotateAt(tallerChild(tallerChild(g)));
+        updateHeight(g);    //更新高度
+    }   //可能需要O(logn)次调整，全树高度有可能下降
+    return true;    //删除成功
+}
+```
+
+#### 复杂度分析
+
+需要平衡操作的节点仍然不过是`x`的祖先，累计仍然**O(logn)**的时间
 
 ### 7.4.5 “3+4”重构
 
+#### 算法
 
+设`g`为最低的失衡节点，沿最长分支考察祖孙三代：g ~ p ~ v
 
+按中序遍历次序，重命名为：a < b < c
 
+它们总共拥有4棵子树（可为空）
+
+按中序遍历次序，重命名为：T<sub>0</sub> < T<sub>1</sub> < T<sub>2</sub> < T<sub>3</sub>
+
+（我们根据不同的情况，为它们进行重命名，这个工作由`rotateAt()`函数完成，我们在后面会有介绍）
+
+将原先以`g`为根的子树S，替换为一棵新子树S'
+
+等价变换保持中序遍历次序：**T<sub>0</sub>  < a < T<sub>1</sub> < b < T<sub>2</sub> <  c < T<sub>3</sub>**
+
+![image-20201115152151957](https://i.loli.net/2020/11/15/z4GOld9BoLah7kq.png)
+
+#### 实现
+
+```cpp
+template <typename T>
+BinNodePosi(T) BST<T>::connect34(
+    BinNodePosi(T) a, BinNodePosi(T) b, BinNodePosi(T) c,
+    BinNodePosi(T) T0, BinNodePosi(T) T1, BinNodePosi(T) T2, BinNodePosi(T) T3)
+{
+    a->lChild = T0;
+    if(T0)
+        T0->parent = a;
+    a->rChild = T1;
+    if(T1)
+        T1->parent = a;
+    c->lChild = T2;
+    if(T2)
+        T2->parent = c;
+    c->rChild = T3;
+    if(T3)
+        T3->parent = c;
+    b->lChild = a;
+    a->parent = b;
+    b->rChild = c;
+    c->parent = b;
+    updateHeight(a);
+    updateHeight(c);
+    updateHeight(b);
+    return b;
+}
+```
+
+#### 统一调整
+
+zig（顺时针旋转）与zag（逆时针旋转）
+
+![image-20201115164524376](https://i.loli.net/2020/11/15/QalfVtmHCO6FbuP.png)
+
+zag-zig与zig-zag（双旋）
+
+![image-20201115164545382](https://i.loli.net/2020/11/15/cCLOdyEezanwJlA.png)
+
+```cpp
+template <typename T>
+BinNodePosi(T) BST<T>::rotateAt(BinNodePosi(T) v)
+{
+    BinNodePosi(T) p = v->parent, g = p->parent;
+    if (IsLChild(*p))     //zig
+        if (IsLChild(*v)) //zig-zig
+        {
+            p->parent = g->parent; //向上联接
+            return connect34(v, p, g, v->lChild, v->rChild, p->rChild, g->rChild);
+        }
+        else //zag-zig(先zag再zig)注意，双旋时v成为该局部的根(即b)
+        {
+            v->parent = g->parent;
+            return connect34(p, v, g, p->lChild, v->lChild, v->rChild, g->rChild);
+        }
+    else                  //zag
+        if (IsRChild(*p)) //zag-zag
+    {
+        p->parent = g->parent;
+        return connect34(g, p, v, g->lChild, p->lChild, v->lChild, v->rChild);
+    }
+    else //zig-zag(先zig再zag)
+    {
+        v->parent = g->parent;
+        return connect34(g, v, p, g->lChild, v->lChild, v->rChild, p->rChild);
+    }
+}
+```
+
+### 综合评价
+
+![image-20201115170833928](https://i.loli.net/2020/11/15/Ls5jgPQriSIDVhf.png)
 
